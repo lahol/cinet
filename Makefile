@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=`pkg-config --cflags glib-2.0 json-glib-1.0`
+CFLAGS=`pkg-config --cflags glib-2.0 json-glib-1.0` -Wall
 LIBS=`pkg-config --libs glib-2.0 json-glib-1.0`
 
 all: test

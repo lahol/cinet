@@ -65,6 +65,8 @@ gpointer cinet_msg_alloc(guint32 msgtype)
         return NULL;
     CINetMsg *msg = g_malloc0(cls->size);
     msg->msgtype = msgtype;
+
+    return msg;
 }
 
 void cinet_msg_free(CINetMsg *msg)
@@ -100,7 +102,6 @@ static inline void cinet_set_ulong(gpointer dst, gint off, guint32 val)
 
 gsize cinet_msg_write_header(gchar *data, gsize len, CINetMsgHeader *header)
 {
-    guint32 value;
     if (!data || len < CINET_HEADER_LENGTH || !header)
         return -1;
     /* magic string */
@@ -269,7 +270,6 @@ CINetMsg *cinet_msg_version_read(JsonNode *root)
     }
 
     JsonObject *obj;
-    JsonNode *node;
 
     obj = json_node_get_object(root);
 
