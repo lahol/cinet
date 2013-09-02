@@ -4,6 +4,7 @@
 #include <json-glib/json-gobject.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <glib/gprintf.h>
 
 struct CINetMsgClass {
     CINetMsgType msgtype;
@@ -252,7 +253,10 @@ CINetMsg *cinet_message_new_va(CINetMsgType msgtype, va_list args)
             key = va_arg(args, gchar*);
             val = va_arg(args, gpointer);
             if (key) {
-                cls->msg_set_value(msg, key, val);
+                if (!g_strcmp0(key, "guid"))
+                    cinet_message_set_value(msg, key, val);
+                else
+                    cls->msg_set_value(msg, key, val);
             }
         } while (key);
     }
@@ -291,7 +295,10 @@ void cinet_message_set_value(CINetMsg *msg, const gchar *key, const gpointer val
     struct CINetMsgClass *cls = cinet_msg_get_class(msg);
     if (!cls || !cls->msg_set_value || !key)
         return;
-    cls->msg_set_value(msg, key, value);
+    if (g_strcmp0(key, "guid") == 0)
+        msg->guid = GPOINTER_TO_UINT(value);
+    else
+        cls->msg_set_value(msg, key, value);
 }
 
 JsonNode *cinet_msg_version_build(CINetMsg *msg)
@@ -301,6 +308,9 @@ JsonNode *cinet_msg_version_build(CINetMsg *msg)
     JsonNode *root;
 
     json_builder_begin_object(builder);
+
+    json_builder_set_member_name(builder, "guid");
+    json_builder_add_int_value(builder, msg->guid);
 
     json_builder_set_member_name(builder, "major");
     json_builder_add_int_value(builder, cmsg->major);
@@ -331,6 +341,7 @@ CINetMsg *cinet_msg_version_read(JsonNode *root)
     CINetMsgVersion *msg = cinet_msg_alloc(CI_NET_MSG_VERSION);
 
     JsonObject *obj = json_node_get_object(root);
+    ((CINetMsg*)msg)->guid = (guint32)json_object_get_int_member(obj, "guid");
 
     msg->major = (guint32)json_object_get_int_member(obj, "major");
     msg->minor = (guint32)json_object_get_int_member(obj, "minor");
@@ -476,6 +487,9 @@ JsonNode *cinet_msg_event_ring_build(CINetMsg *msg)
 
     json_builder_begin_object(builder);
 
+    json_builder_set_member_name(builder, "guid");
+    json_builder_add_int_value(builder, msg->guid);
+
     json_builder_set_member_name(builder, "stage");
     json_builder_add_int_value(builder, ((CINetMsgMultipart*)msg)->stage);
 
@@ -504,6 +518,7 @@ CINetMsg *cinet_msg_event_ring_read(JsonNode *root)
     CINetMsgEventRing *msg = cinet_msg_alloc(CI_NET_MSG_EVENT_RING);
 
     JsonObject *obj = json_node_get_object(root);
+    ((CINetMsg*)msg)->guid = (guint32)json_object_get_int_member(obj, "guid");
 
     cinet_msg_event_ring_set_value((CINetMsg*)msg, "stage", GINT_TO_POINTER(json_object_get_int_member(obj, "stage")));
     cinet_msg_event_ring_set_value((CINetMsg*)msg, "part", GINT_TO_POINTER(json_object_get_int_member(obj, "part")));
@@ -547,6 +562,9 @@ JsonNode *cinet_msg_db_num_calls_build(CINetMsg *msg)
 
     json_builder_begin_object(builder);
 
+    json_builder_set_member_name(builder, "guid");
+    json_builder_add_int_value(builder, msg->guid);
+
     json_builder_set_member_name(builder, "count");
     json_builder_add_int_value(builder, cmsg->count);
 
@@ -565,6 +583,7 @@ CINetMsg *cinet_msg_db_num_calls_read(JsonNode *root)
     CINetMsgDbNumCalls *msg = cinet_msg_alloc(CI_NET_MSG_DB_NUM_CALLS);
 
     JsonObject *obj = json_node_get_object(root);
+    ((CINetMsg*)msg)->guid = (guint32)json_object_get_int_member(obj, "guid");
 
     cinet_msg_db_num_calls_set_value((CINetMsg*)msg, "count",
             GINT_TO_POINTER(json_object_get_int_member(obj, "count")));
@@ -592,6 +611,9 @@ JsonNode *cinet_msg_db_call_list_build(CINetMsg *msg)
     CINetMsgDbCallList *cmsg = (CINetMsgDbCallList*)msg;
 
     json_builder_begin_object(builder);
+
+    json_builder_set_member_name(builder, "guid");
+    json_builder_add_int_value(builder, msg->guid);
 
     json_builder_set_member_name(builder, "user");
     json_builder_add_int_value(builder, cmsg->user);
@@ -623,9 +645,11 @@ CINetMsg *cinet_msg_db_call_list_read(JsonNode *root)
 {
     if (!JSON_NODE_HOLDS_OBJECT(root))
         return NULL;
-    CINetMsgDbCallList *msg = cinet_msg_alloc(CI_NET_MSG_DB_NUM_CALLS);
+    CINetMsgDbCallList *msg = cinet_msg_alloc(CI_NET_MSG_DB_CALL_LIST);
 
     JsonObject *obj = json_node_get_object(root);
+
+    ((CINetMsg*)msg)->guid = (guint32)json_object_get_int_member(obj, "guid");
 
     cinet_msg_db_call_list_set_value((CINetMsg*)msg, "user",
             GINT_TO_POINTER(json_object_get_int_member(obj, "user")));

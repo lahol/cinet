@@ -23,6 +23,7 @@ typedef struct {
 
 typedef struct {
     CINetMsgType msgtype;
+    guint32 guid;                     /* for queries; returned as-is */
 } CINetMsg;
 
 typedef struct {
