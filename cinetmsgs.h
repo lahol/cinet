@@ -11,6 +11,8 @@ typedef enum {
     CI_NET_MSG_EVENT_DISCONNECT,      /* disconnected call */
     CI_NET_MSG_LEAVE,                 /* client leaves */
     CI_NET_MSG_SHUTDOWN,              /* server shuts down */
+    CI_NET_MSG_DB_NUM_CALLS,          /* get number of db entries */
+    CI_NET_MSG_DB_CALL_LIST,          /* get call list */
     CI_NET_MSG_COUNT                  /* total number of messages */
 } CINetMsgType;
 
@@ -45,7 +47,7 @@ typedef enum {
 } CINetMsgMultipartStage;
 
 typedef struct {
-    CINetMsgMultipart parent;
+    gint32 id;
     gchar *completenumber;
     gchar *areacode;
     gchar *number;
@@ -56,6 +58,11 @@ typedef struct {
     gchar *area;
     gchar *name;
     guint32 fields;
+} CICallInfo;
+
+typedef struct {
+    CINetMsgMultipart parent;
+    CICallInfo callinfo;
 } CINetMsgEventRing;
 
 typedef enum {
@@ -72,5 +79,18 @@ typedef enum {
 
 typedef CINetMsg CINetMsgLeave;
 typedef CINetMsg CINetMsgShutdown;
+
+typedef struct {
+    CINetMsg parent;
+    gint count;
+} CINetMsgDbNumCalls;
+
+typedef struct {
+    CINetMsg parent;
+    gint user;
+    gint min_id;
+    gint count;
+    GList *calls; /* [element-type: CICallInfo] */
+} CINetMsgDbCallList;
 
 #endif

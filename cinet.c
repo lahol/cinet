@@ -16,6 +16,10 @@ struct CINetMsgClass {
 
 JsonNode *cinet_msg_default_build(CINetMsg *msg);
 
+void cinet_call_info_build(CICallInfo *info, JsonBuilder *builder);
+void cinet_call_info_read(CICallInfo *info, JsonObject *obj);
+void cinet_call_info_free(CICallInfo *info);
+
 JsonNode *cinet_msg_version_build(CINetMsg *msg);
 CINetMsg *cinet_msg_version_read(JsonNode *root);
 void cinet_msg_version_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
@@ -26,6 +30,15 @@ CINetMsg *cinet_msg_event_ring_read(JsonNode *root);
 void cinet_msg_event_ring_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
 void cinet_msg_event_ring_free(CINetMsg *msg);
 
+JsonNode *cinet_msg_db_num_calls_build(CINetMsg *msg);
+CINetMsg *cinet_msg_db_num_calls_read(JsonNode *root);
+void cinet_msg_db_num_calls_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
+
+JsonNode *cinet_msg_db_call_list_build(CINetMsg *msg);
+CINetMsg *cinet_msg_db_call_list_read(JsonNode *root);
+void cinet_msg_db_call_list_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
+void cinet_msg_db_call_list_free(CINetMsg *msg);
+
 static struct CINetMsgClass msgclasses[] = {
     { CI_NET_MSG_VERSION, sizeof(CINetMsgVersion), cinet_msg_version_build,
         cinet_msg_version_read, cinet_msg_version_free, cinet_msg_version_set_value},
@@ -35,7 +48,11 @@ static struct CINetMsgClass msgclasses[] = {
     { CI_NET_MSG_EVENT_CONNECT, sizeof(CINetMsg), NULL, NULL, NULL, NULL },
     { CI_NET_MSG_EVENT_DISCONNECT, sizeof(CINetMsg), NULL, NULL, NULL, NULL },
     { CI_NET_MSG_LEAVE, sizeof(CINetMsgLeave), NULL, NULL, NULL, NULL },
-    { CI_NET_MSG_SHUTDOWN, sizeof(CINetMsgShutdown), NULL, NULL, NULL, NULL }
+    { CI_NET_MSG_SHUTDOWN, sizeof(CINetMsgShutdown), NULL, NULL, NULL, NULL },
+    { CI_NET_MSG_DB_NUM_CALLS, sizeof(CINetMsgDbNumCalls), cinet_msg_db_num_calls_build,
+        cinet_msg_db_num_calls_read, NULL, cinet_msg_db_num_calls_set_value },
+    { CI_NET_MSG_DB_CALL_LIST, sizeof(CINetMsgDbCallList), cinet_msg_db_call_list_build,
+        cinet_msg_db_call_list_read, cinet_msg_db_call_list_free, cinet_msg_db_call_list_set_value }
 };
 
 static struct CINetMsgClass *cinet_msg_get_class(CINetMsg *msg)
@@ -325,7 +342,7 @@ CINetMsg *cinet_msg_version_read(JsonNode *root)
 
 void cinet_msg_version_set_value(CINetMsg *msg, const gchar *key, const gpointer value)
 {
-    if (!msg || !key)
+    if (!msg || !key || msg->msgtype != CI_NET_MSG_VERSION)
         return;
     CINetMsgVersion *cmsg = (CINetMsgVersion*)msg; 
     if (!strcmp(key, "major"))
@@ -346,6 +363,111 @@ void cinet_msg_version_free(CINetMsg *msg)
     g_free(cmsg->human_readable);
 }
 
+void cinet_call_info_build(CICallInfo *info, JsonBuilder *builder)
+{
+    if (info == NULL || builder == NULL)
+        return;
+
+    json_builder_set_member_name(builder, "id");
+    json_builder_add_int_value(builder, info->id);
+
+#define MSG_BUILD_STR(arg) do {\
+    if (info->arg) {\
+        json_builder_set_member_name(builder, #arg);\
+        json_builder_add_string_value(builder, info->arg);\
+    }\
+} while (0)
+
+    MSG_BUILD_STR(completenumber);
+    MSG_BUILD_STR(areacode);
+    MSG_BUILD_STR(number);
+    MSG_BUILD_STR(date);
+    MSG_BUILD_STR(time);
+    MSG_BUILD_STR(msn);
+    MSG_BUILD_STR(alias);
+    MSG_BUILD_STR(area);
+    MSG_BUILD_STR(name);
+#undef MSG_BUILD_STR
+}
+
+void cinet_call_info_read(CICallInfo *info, JsonObject *obj)
+{
+    if (info == NULL || obj == NULL)
+        return;
+
+    if (json_object_has_member(obj, "id"))
+        cinet_call_info_set_value(info, "id",
+                GINT_TO_POINTER(json_object_get_int_member(obj, "id")));
+
+#define MSG_STR_SET(arg) do {\
+    if (json_object_has_member(obj, arg)) \
+        cinet_call_info_set_value(info, arg, (const gpointer)json_object_get_string_member(obj, arg));\
+    } while (0)
+
+    MSG_STR_SET("msgid");
+    MSG_STR_SET("completenumber");
+    MSG_STR_SET("areacode");
+    MSG_STR_SET("number");
+    MSG_STR_SET("date");
+    MSG_STR_SET("time");
+    MSG_STR_SET("msn");
+    MSG_STR_SET("alias");
+    MSG_STR_SET("area");
+    MSG_STR_SET("name");
+
+#undef MSG_STR_SET
+}
+
+void cinet_call_info_set_value(CICallInfo *info, const gchar *key, const gpointer value)
+{
+    if (info == NULL || key == NULL)
+        return;
+    if (!strcmp(key, "id")) {
+        info->id = GPOINTER_TO_INT(value);
+        return;
+    }
+#define MSG_STR_SET(arg, flag) do {\
+    if (!strcmp(key, #arg)) {\
+        if (value) {\
+            info->arg = g_strdup((const gchar*)value);\
+            info->fields |= flag;\
+        }\
+        else {\
+            g_free(info->arg);\
+            info->arg = NULL;\
+            info->fields &= ~flag;\
+        }\
+        return;\
+    }} while(0)
+
+    MSG_STR_SET(completenumber, CIF_COMPLETENUMBER);
+    MSG_STR_SET(areacode, CIF_AREACODE);
+    MSG_STR_SET(number, CIF_NUMBER);
+    MSG_STR_SET(date, CIF_DATE);
+    MSG_STR_SET(time, CIF_TIME);
+    MSG_STR_SET(msn, CIF_MSN);
+    MSG_STR_SET(alias, CIF_ALIAS);
+    MSG_STR_SET(area, CIF_AREA);
+    MSG_STR_SET(name, CIF_NAME);
+
+#undef MSG_STR_SET
+}
+
+void cinet_call_info_free(CICallInfo *info)
+{
+    if (info == NULL)
+        return;
+    g_free(info->completenumber);
+    g_free(info->areacode);
+    g_free(info->number);
+    g_free(info->date);
+    g_free(info->time);
+    g_free(info->msn);
+    g_free(info->alias);
+    g_free(info->area);
+    g_free(info->name);
+}
+
 JsonNode *cinet_msg_event_ring_build(CINetMsg *msg)
 {
     CINetMsgEventRing *cmsg = (CINetMsgEventRing*)msg;
@@ -363,42 +485,7 @@ JsonNode *cinet_msg_event_ring_build(CINetMsg *msg)
     json_builder_set_member_name(builder, "msgid");
     json_builder_add_string_value(builder, ((CINetMsgMultipart*)msg)->msgid);
 
-    if (cmsg->completenumber) {
-        json_builder_set_member_name(builder, "completenumber");
-        json_builder_add_string_value(builder, cmsg->completenumber);
-    }
-    if (cmsg->areacode) {
-        json_builder_set_member_name(builder, "areacode");
-        json_builder_add_string_value(builder, cmsg->areacode);
-    }
-    if (cmsg->number) {
-        json_builder_set_member_name(builder, "number");
-        json_builder_add_string_value(builder, cmsg->number);
-    }
-    if (cmsg->date) {
-        json_builder_set_member_name(builder, "date");
-        json_builder_add_string_value(builder, cmsg->date);
-    }
-    if (cmsg->time) {
-        json_builder_set_member_name(builder, "time");
-        json_builder_add_string_value(builder, cmsg->time);
-    }
-    if (cmsg->msn) {
-        json_builder_set_member_name(builder, "msn");
-        json_builder_add_string_value(builder, cmsg->msn);
-    }
-    if (cmsg->alias) {
-        json_builder_set_member_name(builder, "alias");
-        json_builder_add_string_value(builder, cmsg->alias);
-    }
-    if (cmsg->area) {
-        json_builder_set_member_name(builder, "area");
-        json_builder_add_string_value(builder, cmsg->area);
-    }
-    if (cmsg->name) {
-        json_builder_set_member_name(builder, "name");
-        json_builder_add_string_value(builder, cmsg->name);
-    }
+    cinet_call_info_build(&cmsg->callinfo, builder);
 
     json_builder_end_object(builder);
 
@@ -421,30 +508,14 @@ CINetMsg *cinet_msg_event_ring_read(JsonNode *root)
     cinet_msg_event_ring_set_value((CINetMsg*)msg, "stage", GINT_TO_POINTER(json_object_get_int_member(obj, "stage")));
     cinet_msg_event_ring_set_value((CINetMsg*)msg, "part", GINT_TO_POINTER(json_object_get_int_member(obj, "part")));
 
-#define MSG_STR_SET(arg) do {\
-    if (json_object_has_member(obj, arg)) \
-        cinet_msg_event_ring_set_value((CINetMsg*)msg, arg, (const gpointer)json_object_get_string_member(obj, arg));\
-    } while (0)
-
-    MSG_STR_SET("msgid");
-    MSG_STR_SET("completenumber");
-    MSG_STR_SET("areacode");
-    MSG_STR_SET("number");
-    MSG_STR_SET("date");
-    MSG_STR_SET("time");
-    MSG_STR_SET("msn");
-    MSG_STR_SET("alias");
-    MSG_STR_SET("area");
-    MSG_STR_SET("name");
-
-#undef MSG_STR_SET
+    cinet_call_info_read(&msg->callinfo, obj);
 
     return (CINetMsg*)msg;
 }
 
 void cinet_msg_event_ring_set_value(CINetMsg *msg, const gchar *key, const gpointer value)
 {
-    if (!msg || !key)
+    if (!msg || !key || msg->msgtype != CI_NET_MSG_EVENT_RING)
         return;
     if (!strcmp(key, "msgid")) {
         strncpy(((CINetMsgMultipart*)msg)->msgid, value, 16);
@@ -458,44 +529,157 @@ void cinet_msg_event_ring_set_value(CINetMsg *msg, const gchar *key, const gpoin
         ((CINetMsgMultipart*)msg)->part = GPOINTER_TO_INT(value);
         return;
     }
-#define MSG_STR_SET(arg, flag) do {\
-    if (!strcmp(key, #arg)) {\
-        if (value) {\
-            ((CINetMsgEventRing*)msg)->arg = g_strdup((const gchar*)value);\
-            ((CINetMsgEventRing*)msg)->fields |= flag;\
-        }\
-        else {\
-            g_free(((CINetMsgEventRing*)msg)->arg);\
-            ((CINetMsgEventRing*)msg)->arg = NULL;\
-            ((CINetMsgEventRing*)msg)->fields &= ~flag;\
-        }\
-        return;\
-    }} while(0)
-
-    MSG_STR_SET(completenumber, CIF_COMPLETENUMBER);
-    MSG_STR_SET(areacode, CIF_AREACODE);
-    MSG_STR_SET(number, CIF_NUMBER);
-    MSG_STR_SET(date, CIF_DATE);
-    MSG_STR_SET(time, CIF_TIME);
-    MSG_STR_SET(msn, CIF_MSN);
-    MSG_STR_SET(alias, CIF_ALIAS);
-    MSG_STR_SET(area, CIF_AREA);
-    MSG_STR_SET(name, CIF_NAME);
-
-#undef MSG_STR_SET
+    
+    cinet_call_info_set_value(&((CINetMsgEventRing*)msg)->callinfo, key, value);
 }
 
 void cinet_msg_event_ring_free(CINetMsg *msg)
 {
-    g_free(((CINetMsgEventRing*)msg)->completenumber);
-    g_free(((CINetMsgEventRing*)msg)->areacode);
-    g_free(((CINetMsgEventRing*)msg)->number);
-    g_free(((CINetMsgEventRing*)msg)->date);
-    g_free(((CINetMsgEventRing*)msg)->time);
-    g_free(((CINetMsgEventRing*)msg)->msn);
-    g_free(((CINetMsgEventRing*)msg)->alias);
-    g_free(((CINetMsgEventRing*)msg)->area);
-    g_free(((CINetMsgEventRing*)msg)->name);
+    cinet_call_info_free(&((CINetMsgEventRing*)msg)->callinfo);
+}
+
+JsonNode *cinet_msg_db_num_calls_build(CINetMsg *msg)
+{
+    CINetMsgDbNumCalls *cmsg = (CINetMsgDbNumCalls*)msg;
+
+    JsonBuilder *builder = json_builder_new();
+    JsonNode *root;
+
+    json_builder_begin_object(builder);
+
+    json_builder_set_member_name(builder, "count");
+    json_builder_add_int_value(builder, cmsg->count);
+
+    json_builder_end_object(builder);
+
+    root = json_builder_get_root(builder);
+    g_object_unref(builder);
+
+    return root;
+}
+
+CINetMsg *cinet_msg_db_num_calls_read(JsonNode *root)
+{
+    if (!JSON_NODE_HOLDS_OBJECT(root))
+        return NULL;
+    CINetMsgDbNumCalls *msg = cinet_msg_alloc(CI_NET_MSG_DB_NUM_CALLS);
+
+    JsonObject *obj = json_node_get_object(root);
+
+    cinet_msg_db_num_calls_set_value((CINetMsg*)msg, "count",
+            GINT_TO_POINTER(json_object_get_int_member(obj, "count")));
+
+    return (CINetMsg*)msg;
+}
+
+void cinet_msg_db_num_calls_set_value(CINetMsg *msg, const gchar *key, const gpointer value)
+{
+    if (!msg || !key || msg->msgtype != CI_NET_MSG_DB_NUM_CALLS)
+        return;
+
+    if (!strcmp(key, "count")) {
+        ((CINetMsgDbNumCalls*)msg)->count = GPOINTER_TO_INT(value);
+        return;
+    }
+}
+
+JsonNode *cinet_msg_db_call_list_build(CINetMsg *msg)
+{
+    JsonBuilder *builder = json_builder_new();
+    JsonNode *root;
+    GList *tmp;
+
+    CINetMsgDbCallList *cmsg = (CINetMsgDbCallList*)msg;
+
+    json_builder_begin_object(builder);
+
+    json_builder_set_member_name(builder, "user");
+    json_builder_add_int_value(builder, cmsg->user);
+
+    json_builder_set_member_name(builder, "min-id");
+    json_builder_add_int_value(builder, cmsg->min_id);
+
+    json_builder_set_member_name(builder, "count");
+    json_builder_add_int_value(builder, cmsg->count);
+
+    json_builder_set_member_name(builder, "calls");
+    json_builder_begin_array(builder);
+    for (tmp = cmsg->calls; tmp != NULL; tmp = g_list_next(tmp)) {
+        json_builder_begin_object(builder);
+        cinet_call_info_build((CICallInfo*)tmp->data, builder);
+        json_builder_end_object(builder);
+    }
+    json_builder_end_array(builder);
+
+    json_builder_end_object(builder);
+
+    root = json_builder_get_root(builder);
+    g_object_unref(builder);
+
+    return root;
+}
+
+CINetMsg *cinet_msg_db_call_list_read(JsonNode *root)
+{
+    if (!JSON_NODE_HOLDS_OBJECT(root))
+        return NULL;
+    CINetMsgDbCallList *msg = cinet_msg_alloc(CI_NET_MSG_DB_NUM_CALLS);
+
+    JsonObject *obj = json_node_get_object(root);
+
+    cinet_msg_db_call_list_set_value((CINetMsg*)msg, "user",
+            GINT_TO_POINTER(json_object_get_int_member(obj, "user")));
+    cinet_msg_db_call_list_set_value((CINetMsg*)msg, "min-id",
+            GINT_TO_POINTER(json_object_get_int_member(obj, "min-id")));
+    cinet_msg_db_call_list_set_value((CINetMsg*)msg, "count",
+            GINT_TO_POINTER(json_object_get_int_member(obj, "count")));
+
+    /* calls=array of cicallinfo objects */
+    JsonArray *arr = json_node_get_array(json_object_get_member(obj, "calls"));
+    GList *calls = json_array_get_elements(arr);
+    GList *tmp;
+    CICallInfo *info;
+
+    for (tmp = calls; tmp != NULL; tmp = g_list_next(tmp)) {
+        info = g_malloc0(sizeof(CICallInfo));
+        cinet_call_info_read(info, json_node_get_object((JsonNode*)tmp->data));
+        msg->calls = g_list_prepend(msg->calls, (gpointer)info);
+    }
+
+    msg->calls = g_list_reverse(msg->calls);
+
+    g_list_free(calls);
+
+    return (CINetMsg*)msg;
+}
+
+void cinet_msg_db_call_list_set_value(CINetMsg *msg, const gchar *key, const gpointer value)
+{
+    if (!msg || !key || msg->msgtype != CI_NET_MSG_DB_CALL_LIST)
+        return;
+
+    if (!strcmp(key, "user")) {
+        ((CINetMsgDbCallList*)msg)->user = GPOINTER_TO_INT(value);
+        return;
+    }
+    if (!strcmp(key, "min-id")) {
+        ((CINetMsgDbCallList*)msg)->min_id = GPOINTER_TO_INT(value);
+        return;
+    }
+    if (!strcmp(key, "count")) {
+        ((CINetMsgDbCallList*)msg)->count = GPOINTER_TO_INT(value);
+        return;
+    }
+    if (!strcmp(key, "call")) {
+        ((CINetMsgDbCallList*)msg)->calls = g_list_append(
+            ((CINetMsgDbCallList*)msg)->calls, value);
+        return;
+    }
+}
+
+void cinet_msg_db_call_list_free(CINetMsg *msg)
+{
+    g_list_free_full(((CINetMsgDbCallList*)msg)->calls, (GDestroyNotify)cinet_call_info_free);
 }
 
 JsonNode *cinet_msg_default_build(CINetMsg *msg)
