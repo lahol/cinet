@@ -19,7 +19,6 @@ JsonNode *cinet_msg_default_build(CINetMsg *msg);
 
 void cinet_call_info_build(CICallInfo *info, JsonBuilder *builder);
 void cinet_call_info_read(CICallInfo *info, JsonObject *obj);
-void cinet_call_info_free(CICallInfo *info);
 
 JsonNode *cinet_msg_version_build(CINetMsg *msg);
 CINetMsg *cinet_msg_version_read(JsonNode *root);
@@ -464,6 +463,30 @@ void cinet_call_info_set_value(CICallInfo *info, const gchar *key, const gpointe
 #undef MSG_STR_SET
 }
 
+CICallInfo *cinet_call_info_new(void)
+{
+    return (CICallInfo*)g_malloc0(sizeof(CICallInfo));
+}
+
+void cinet_call_info_copy(CICallInfo *dst, CICallInfo *src)
+{
+    if (dst == NULL || src == NULL || dst == src)
+        return;
+    dst->id = src->id;
+    dst->fields = src->fields;
+#define CPY_STR(arg) do { g_free(dst->arg); dst->arg = g_strdup(src->arg); } while (0)
+    CPY_STR(completenumber);
+    CPY_STR(areacode);
+    CPY_STR(number);
+    CPY_STR(date);
+    CPY_STR(time);
+    CPY_STR(msn);
+    CPY_STR(alias);
+    CPY_STR(area);
+    CPY_STR(name);
+#undef CPY_STR
+}
+
 void cinet_call_info_free(CICallInfo *info)
 {
     if (info == NULL)
@@ -618,8 +641,8 @@ JsonNode *cinet_msg_db_call_list_build(CINetMsg *msg)
     json_builder_set_member_name(builder, "user");
     json_builder_add_int_value(builder, cmsg->user);
 
-    json_builder_set_member_name(builder, "min-id");
-    json_builder_add_int_value(builder, cmsg->min_id);
+    json_builder_set_member_name(builder, "offset");
+    json_builder_add_int_value(builder, cmsg->offset);
 
     json_builder_set_member_name(builder, "count");
     json_builder_add_int_value(builder, cmsg->count);
@@ -653,8 +676,8 @@ CINetMsg *cinet_msg_db_call_list_read(JsonNode *root)
 
     cinet_msg_db_call_list_set_value((CINetMsg*)msg, "user",
             GINT_TO_POINTER(json_object_get_int_member(obj, "user")));
-    cinet_msg_db_call_list_set_value((CINetMsg*)msg, "min-id",
-            GINT_TO_POINTER(json_object_get_int_member(obj, "min-id")));
+    cinet_msg_db_call_list_set_value((CINetMsg*)msg, "offset",
+            GINT_TO_POINTER(json_object_get_int_member(obj, "offset")));
     cinet_msg_db_call_list_set_value((CINetMsg*)msg, "count",
             GINT_TO_POINTER(json_object_get_int_member(obj, "count")));
 
@@ -686,8 +709,8 @@ void cinet_msg_db_call_list_set_value(CINetMsg *msg, const gchar *key, const gpo
         ((CINetMsgDbCallList*)msg)->user = GPOINTER_TO_INT(value);
         return;
     }
-    if (!strcmp(key, "min-id")) {
-        ((CINetMsgDbCallList*)msg)->min_id = GPOINTER_TO_INT(value);
+    if (!strcmp(key, "offset")) {
+        ((CINetMsgDbCallList*)msg)->offset = GPOINTER_TO_INT(value);
         return;
     }
     if (!strcmp(key, "count")) {

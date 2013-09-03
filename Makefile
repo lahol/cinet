@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=`pkg-config --cflags glib-2.0 json-glib-1.0` -Wall -g
 LIBS=`pkg-config --libs glib-2.0 json-glib-1.0`
 
-all: libcinet.so.1.0 test
+all: libcinet.so.1.0
 
 test: test.o
 	$(CC) -L. -o test test.o -lcinet $(LIBS)

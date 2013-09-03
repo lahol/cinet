@@ -89,7 +89,7 @@ typedef struct {
 typedef struct {
     CINetMsg parent;
     gint user;
-    gint min_id;
+    gint offset;
     gint count;
     GList *calls; /* [element-type: CICallInfo] */
 } CINetMsgDbCallList;
