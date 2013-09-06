@@ -1,0 +1,30 @@
+CC=$(CROSS)gcc
+LD=$(CROSS)ld
+AR=$(CROSS)ar
+PKG_CONFIG=$(CROSS)pkg-config
+CFLAGS=`$(PKG_CONFIG) --cflags glib-2.0 json-glib-1.0` -Wall -g
+LIBS=`$(PKG_CONFIG) --libs glib-2.0 json-glib-1.0`
+
+all: libcinet.so.1.0 libcinet.a
+
+test: test.o
+	$(CC) -L. -o test test.o -lcinet $(LIBS)
+
+libcinet.so.1.0: cinet.o
+	$(CC) -shared -Wl,-soname,libcinet.so -o libcinet.so.1.0 cinet.o $(LIBS)
+
+libcinet.a: cinet.o
+	$(AR) -cvq -o libcinet.a cinet.o
+
+%.o: %.c $(wildcard *.h)
+	$(CC) -I. $(CFLAGS) -c -o $@ $<
+
+install: libcinet.so.1.0 libcinet.a
+	install libcinet.so.1.0 $(CROSSENV)/usr/lib/
+	install libcinet.a $(CROSSENV)/usr/lib/
+	ln -sf $(CROSSENV)/usr/lib/libcinet.so.1.0 $(CROSSENV)/usr/lib/libcinet.so.1
+	ln -sf $(CROSSENV)/usr/lib/libcinet.so.1 $(CROSSENV)/usr/lib/libcinet.so
+	cp cinet.h cinetmsgs.h $(CROSSENV)/usr/include
+
+clean:
+	rm -f cinet.dll test test.o cinet.o
