@@ -13,7 +13,12 @@ typedef enum {
     CI_NET_MSG_SHUTDOWN,              /* server shuts down */
     CI_NET_MSG_DB_NUM_CALLS,          /* get number of db entries */
     CI_NET_MSG_DB_CALL_LIST,          /* get call list */
-    CI_NET_MSG_COUNT                  /* total number of messages */
+    CI_NET_MSG_DB_GET_CALLER,         /* get caller information */
+    CI_NET_MSG_DB_ADD_CALLER,         /* add caller to db */
+    CI_NET_MSG_DB_DEL_CALLER,         /* delete caller from list */
+    CI_NET_MSG_DB_GET_CALLER_LIST,    /* get list of callers matching a filter */
+    CI_NET_MSG_COUNT,                 /* total number of messages */
+    CI_NET_MSG_INVALID = 32767        /* invalid message type */
 } CINetMsgType;
 
 typedef struct {
@@ -62,6 +67,11 @@ typedef struct {
 } CICallInfo;
 
 typedef struct {
+    gchar *number;
+    gchar *name;
+} CICallerInfo;
+
+typedef struct {
     CINetMsgMultipart parent;
     CICallInfo callinfo;
 } CINetMsgEventRing;
@@ -93,5 +103,30 @@ typedef struct {
     gint count;
     GList *calls; /* [element-type: CICallInfo] */
 } CINetMsgDbCallList;
+
+typedef struct {
+    CINetMsg parent;
+    gint user;
+    CICallerInfo caller;
+} CINetMsgDbGetCaller;
+
+typedef struct {
+    CINetMsg parent;
+    gint user;
+    CICallerInfo caller;
+} CINetMsgDbAddCaller;
+
+typedef struct {
+    CINetMsg parent;
+    gint user;
+    CICallerInfo caller;
+} CINetMsgDbDelCaller;
+
+typedef struct {
+    CINetMsg parent;
+    gint user;
+    gchar *filter;
+    GList *callers;                /* [element-type: CICallerInfo] */
+} CINetMsgDbGetCallerList;
 
 #endif

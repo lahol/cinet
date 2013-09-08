@@ -2,7 +2,7 @@ CC=$(CROSS)gcc
 LD=$(CROSS)ld
 AR=$(CROSS)ar
 PKG_CONFIG=$(CROSS)pkg-config
-CFLAGS=`$(PKG_CONFIG) --cflags glib-2.0 json-glib-1.0` -Wall -g
+CFLAGS=`$(PKG_CONFIG) --cflags glib-2.0 json-glib-1.0` -Wall -g -mms-bitfields
 LIBS=`$(PKG_CONFIG) --libs glib-2.0 json-glib-1.0`
 
 all: libcinet.so.1.0 libcinet.a

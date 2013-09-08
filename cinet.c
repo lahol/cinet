@@ -20,6 +20,9 @@ JsonNode *cinet_msg_default_build(CINetMsg *msg);
 void cinet_call_info_build(CICallInfo *info, JsonBuilder *builder);
 void cinet_call_info_read(CICallInfo *info, JsonObject *obj);
 
+void cinet_caller_info_build(CICallerInfo *info, JsonBuilder *builder);
+void cinet_caller_info_read(CICallerInfo *info, JsonObject *obj);
+
 JsonNode *cinet_msg_version_build(CINetMsg *msg);
 CINetMsg *cinet_msg_version_read(JsonNode *root);
 void cinet_msg_version_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
@@ -39,6 +42,26 @@ CINetMsg *cinet_msg_db_call_list_read(JsonNode *root);
 void cinet_msg_db_call_list_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
 void cinet_msg_db_call_list_free(CINetMsg *msg);
 
+JsonNode *cinet_msg_db_get_caller_build(CINetMsg *msg);
+CINetMsg *cinet_msg_db_get_caller_read(JsonNode *root);
+void cinet_msg_db_get_caller_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
+void cinet_msg_db_get_caller_free(CINetMsg *msg);
+
+JsonNode *cinet_msg_db_add_caller_build(CINetMsg *msg);
+CINetMsg *cinet_msg_db_add_caller_read(JsonNode *root);
+void cinet_msg_db_add_caller_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
+void cinet_msg_db_add_caller_free(CINetMsg *msg);
+
+JsonNode *cinet_msg_db_del_caller_build(CINetMsg *msg);
+CINetMsg *cinet_msg_db_del_caller_read(JsonNode *root);
+void cinet_msg_db_del_caller_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
+void cinet_msg_db_del_caller_free(CINetMsg *msg);
+
+JsonNode *cinet_msg_db_get_caller_list_build(CINetMsg *msg);
+CINetMsg *cinet_msg_db_get_caller_list_read(JsonNode *root);
+void cinet_msg_db_get_caller_list_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
+void cinet_msg_db_get_caller_list_free(CINetMsg *msg);
+
 static struct CINetMsgClass msgclasses[] = {
     { CI_NET_MSG_VERSION, sizeof(CINetMsgVersion), cinet_msg_version_build,
         cinet_msg_version_read, cinet_msg_version_free, cinet_msg_version_set_value},
@@ -52,7 +75,15 @@ static struct CINetMsgClass msgclasses[] = {
     { CI_NET_MSG_DB_NUM_CALLS, sizeof(CINetMsgDbNumCalls), cinet_msg_db_num_calls_build,
         cinet_msg_db_num_calls_read, NULL, cinet_msg_db_num_calls_set_value },
     { CI_NET_MSG_DB_CALL_LIST, sizeof(CINetMsgDbCallList), cinet_msg_db_call_list_build,
-        cinet_msg_db_call_list_read, cinet_msg_db_call_list_free, cinet_msg_db_call_list_set_value }
+        cinet_msg_db_call_list_read, cinet_msg_db_call_list_free, cinet_msg_db_call_list_set_value },
+    { CI_NET_MSG_DB_GET_CALLER, sizeof(CINetMsgDbGetCaller), cinet_msg_db_get_caller_build,
+        cinet_msg_db_get_caller_read, cinet_msg_db_get_caller_free, cinet_msg_db_get_caller_set_value },
+    { CI_NET_MSG_DB_ADD_CALLER, sizeof(CINetMsgDbAddCaller), cinet_msg_db_add_caller_build,
+        cinet_msg_db_add_caller_read, cinet_msg_db_add_caller_free, cinet_msg_db_add_caller_set_value },
+    { CI_NET_MSG_DB_DEL_CALLER, sizeof(CINetMsgDbDelCaller), cinet_msg_db_del_caller_build,
+        cinet_msg_db_del_caller_read, cinet_msg_db_del_caller_free, cinet_msg_db_del_caller_set_value },
+    { CI_NET_MSG_DB_GET_CALLER_LIST, sizeof(CINetMsgDbGetCallerList), cinet_msg_db_get_caller_list_build,
+        cinet_msg_db_get_caller_list_read, cinet_msg_db_get_caller_list_free, cinet_msg_db_get_caller_list_set_value },
 };
 
 static struct CINetMsgClass *cinet_msg_get_class(CINetMsg *msg)
@@ -428,6 +459,40 @@ void cinet_call_info_read(CICallInfo *info, JsonObject *obj)
 #undef MSG_STR_SET
 }
 
+void cinet_caller_info_build(CICallerInfo *info, JsonBuilder *builder)
+{
+    if (info == NULL || builder == NULL)
+        return;
+
+#define MSG_BUILD_STR(arg) do {\
+    if (info->arg) {\
+        json_builder_set_member_name(builder, #arg);\
+        json_builder_add_string_value(builder, info->arg);\
+    }\
+} while (0)
+
+    MSG_BUILD_STR(number);
+    MSG_BUILD_STR(name);
+
+#undef MSG_BUILD_STR
+}
+
+void cinet_caller_info_read(CICallerInfo *info, JsonObject *obj)
+{
+    if (info == NULL || obj == NULL)
+        return;
+
+#define MSG_STR_SET(arg) do {\
+    if (json_object_has_member(obj, #arg))\
+        cinet_caller_info_set_value(info, #arg, (const gpointer)json_object_get_string_member(obj, #arg));\
+    } while (0)
+
+    MSG_STR_SET(number);
+    MSG_STR_SET(name);
+
+#undef MSG_STR_SET
+}
+
 void cinet_call_info_set_value(CICallInfo *info, const gchar *key, const gpointer value)
 {
     if (info == NULL || key == NULL)
@@ -500,6 +565,63 @@ void cinet_call_info_free(CICallInfo *info)
     g_free(info->alias);
     g_free(info->area);
     g_free(info->name);
+}
+
+void cinet_call_info_free_full(CICallInfo *info)
+{
+    cinet_call_info_free(info);
+    g_free(info);
+}
+
+CICallerInfo *cinet_caller_info_new(void)
+{
+    return (CICallerInfo*)g_malloc0(sizeof(CICallerInfo));
+}
+
+void cinet_caller_info_free(CICallerInfo *info)
+{
+    if (info == NULL)
+        return;
+    g_free(info->number);
+    g_free(info->name);
+}
+
+void cinet_caller_info_free_full(CICallerInfo *info)
+{
+    cinet_caller_info_free(info);
+    g_free(info);
+}
+
+void cinet_caller_info_copy(CICallerInfo *dst, CICallerInfo *src)
+{
+    if (dst == NULL || src == NULL || dst == src)
+        return;
+
+#define CPY_STR(arg) do { g_free(dst->arg); dst->arg = g_strdup(src->arg); } while (0)
+    CPY_STR(number);
+    CPY_STR(name);
+#undef CPY_STR
+}
+
+void cinet_caller_info_set_value(CICallerInfo *info, const gchar *key, const gpointer value)
+{
+    if (info == NULL || key == NULL)
+        return;
+#define MSG_STR_SET(arg) do {\
+    if (!strcmp(key, #arg)) {\
+        if (value)\
+            info->arg = g_strdup((const gchar*)value);\
+        else {\
+            g_free(info->arg);\
+            info->arg = NULL;\
+        }\
+        return;\
+    }} while (0)
+
+    MSG_STR_SET(number);
+    MSG_STR_SET(name);
+
+#undef MSG_STR_SET
 }
 
 JsonNode *cinet_msg_event_ring_build(CINetMsg *msg)
@@ -688,7 +810,7 @@ CINetMsg *cinet_msg_db_call_list_read(JsonNode *root)
     CICallInfo *info;
 
     for (tmp = calls; tmp != NULL; tmp = g_list_next(tmp)) {
-        info = g_malloc0(sizeof(CICallInfo));
+        info = cinet_call_info_new();
         cinet_call_info_read(info, json_node_get_object((JsonNode*)tmp->data));
         msg->calls = g_list_prepend(msg->calls, (gpointer)info);
     }
@@ -726,7 +848,291 @@ void cinet_msg_db_call_list_set_value(CINetMsg *msg, const gchar *key, const gpo
 
 void cinet_msg_db_call_list_free(CINetMsg *msg)
 {
-    g_list_free_full(((CINetMsgDbCallList*)msg)->calls, (GDestroyNotify)cinet_call_info_free);
+    g_list_free_full(((CINetMsgDbCallList*)msg)->calls, (GDestroyNotify)cinet_call_info_free_full);
+}
+
+JsonNode *cinet_msg_db_get_caller_build(CINetMsg *msg)
+{
+    JsonBuilder *builder = json_builder_new();
+    JsonNode *root;
+
+    CINetMsgDbGetCaller *cmsg = (CINetMsgDbGetCaller*)msg;
+
+    json_builder_begin_object(builder);
+
+    json_builder_set_member_name(builder, "guid");
+    json_builder_add_int_value(builder, msg->guid);
+
+    json_builder_set_member_name(builder, "user");
+    json_builder_add_int_value(builder, cmsg->user);
+
+    cinet_caller_info_build(&cmsg->caller, builder);
+
+    json_builder_end_object(builder);
+
+    root = json_builder_get_root(builder);
+    g_object_unref(builder);
+
+    return root;
+}
+
+CINetMsg *cinet_msg_db_get_caller_read(JsonNode *root)
+{
+    if (!JSON_NODE_HOLDS_OBJECT(root))
+        return NULL;
+
+    CINetMsgDbGetCaller *msg = cinet_msg_alloc(CI_NET_MSG_DB_GET_CALLER);
+    
+    JsonObject *obj = json_node_get_object(root);
+
+    ((CINetMsg*)msg)->guid = (guint32)json_object_get_int_member(obj, "guid");
+
+    cinet_msg_db_get_caller_set_value((CINetMsg*)msg, "user", GINT_TO_POINTER(json_object_get_int_member(obj, "user")));
+
+    cinet_caller_info_read(&msg->caller, obj);
+
+    return (CINetMsg*)msg;
+}
+
+void cinet_msg_db_get_caller_set_value(CINetMsg *msg, const gchar *key, const gpointer value)
+{
+    if (!msg || !key || msg->msgtype != CI_NET_MSG_DB_GET_CALLER)
+        return;
+
+    if (!strcmp(key, "user")) {
+        ((CINetMsgDbGetCaller*)msg)->user = GPOINTER_TO_INT(value);
+        return;
+    }
+
+    cinet_caller_info_set_value(&((CINetMsgDbGetCaller*)msg)->caller, key, value);
+}
+
+void cinet_msg_db_get_caller_free(CINetMsg *msg)
+{
+    cinet_caller_info_free(&((CINetMsgDbGetCaller*)msg)->caller);
+}
+
+JsonNode *cinet_msg_db_add_caller_build(CINetMsg *msg)
+{
+    JsonBuilder *builder = json_builder_new();
+    JsonNode *root;
+
+    CINetMsgDbAddCaller *cmsg = (CINetMsgDbAddCaller*)msg;
+
+    json_builder_begin_object(builder);
+
+    json_builder_set_member_name(builder, "guid");
+    json_builder_add_int_value(builder, msg->guid);
+
+    json_builder_set_member_name(builder, "user");
+    json_builder_add_int_value(builder, cmsg->user);
+
+    cinet_caller_info_build(&cmsg->caller, builder);
+
+    json_builder_end_object(builder);
+
+    root = json_builder_get_root(builder);
+    g_object_unref(builder);
+
+    return root;
+}
+
+CINetMsg *cinet_msg_db_add_caller_read(JsonNode *root)
+{
+    if (!JSON_NODE_HOLDS_OBJECT(root))
+        return NULL;
+
+    CINetMsgDbAddCaller *msg = cinet_msg_alloc(CI_NET_MSG_DB_ADD_CALLER);
+    
+    JsonObject *obj = json_node_get_object(root);
+
+    ((CINetMsg*)msg)->guid = (guint32)json_object_get_int_member(obj, "guid");
+
+    cinet_msg_db_add_caller_set_value((CINetMsg*)msg, "user", GINT_TO_POINTER(json_object_get_int_member(obj, "user")));
+
+    cinet_caller_info_read(&msg->caller, obj);
+
+    return (CINetMsg*)msg;
+}
+
+void cinet_msg_db_add_caller_set_value(CINetMsg *msg, const gchar *key, const gpointer value)
+{
+    if (!msg || !key || msg->msgtype != CI_NET_MSG_DB_ADD_CALLER)
+        return;
+
+    if (!strcmp(key, "user")) {
+        ((CINetMsgDbAddCaller*)msg)->user = GPOINTER_TO_INT(value);
+        return;
+    }
+
+    cinet_caller_info_set_value(&((CINetMsgDbAddCaller*)msg)->caller, key, value);
+}
+
+void cinet_msg_db_add_caller_free(CINetMsg *msg)
+{
+    cinet_caller_info_free(&((CINetMsgDbAddCaller*)msg)->caller);
+}
+
+JsonNode *cinet_msg_db_del_caller_build(CINetMsg *msg)
+{
+    JsonBuilder *builder = json_builder_new();
+    JsonNode *root;
+
+    CINetMsgDbDelCaller *cmsg = (CINetMsgDbDelCaller*)msg;
+
+    json_builder_begin_object(builder);
+
+    json_builder_set_member_name(builder, "guid");
+    json_builder_add_int_value(builder, msg->guid);
+
+    json_builder_set_member_name(builder, "user");
+    json_builder_add_int_value(builder, cmsg->user);
+
+    cinet_caller_info_build(&cmsg->caller, builder);
+
+    json_builder_end_object(builder);
+
+    root = json_builder_get_root(builder);
+    g_object_unref(builder);
+
+    return root;
+}
+
+CINetMsg *cinet_msg_db_del_caller_read(JsonNode *root)
+{
+    if (!JSON_NODE_HOLDS_OBJECT(root))
+        return NULL;
+
+    CINetMsgDbDelCaller *msg = cinet_msg_alloc(CI_NET_MSG_DB_DEL_CALLER);
+    
+    JsonObject *obj = json_node_get_object(root);
+
+    ((CINetMsg*)msg)->guid = (guint32)json_object_get_int_member(obj, "guid");
+
+    cinet_msg_db_del_caller_set_value((CINetMsg*)msg, "user", GINT_TO_POINTER(json_object_get_int_member(obj, "user")));
+
+    cinet_caller_info_read(&msg->caller, obj);
+
+    return (CINetMsg*)msg;
+}
+
+void cinet_msg_db_del_caller_set_value(CINetMsg *msg, const gchar *key, const gpointer value)
+{
+    if (!msg || !key || msg->msgtype != CI_NET_MSG_DB_DEL_CALLER)
+        return;
+
+    if (!strcmp(key, "user")) {
+        ((CINetMsgDbDelCaller*)msg)->user = GPOINTER_TO_INT(value);
+        return;
+    }
+
+    cinet_caller_info_set_value(&((CINetMsgDbDelCaller*)msg)->caller, key, value);
+}
+
+void cinet_msg_db_del_caller_free(CINetMsg *msg)
+{
+    cinet_caller_info_free(&((CINetMsgDbDelCaller*)msg)->caller);
+}
+
+JsonNode *cinet_msg_db_get_caller_list_build(CINetMsg *msg)
+{
+    JsonBuilder *builder = json_builder_new();
+    JsonNode *root;
+    GList *tmp;
+
+    CINetMsgDbGetCallerList *cmsg = (CINetMsgDbGetCallerList*)msg;
+
+    json_builder_begin_object(builder);
+
+    json_builder_set_member_name(builder, "guid");
+    json_builder_add_int_value(builder, msg->guid);
+
+    json_builder_set_member_name(builder, "user");
+    json_builder_add_int_value(builder, cmsg->user);
+
+    json_builder_set_member_name(builder, "format");
+    json_builder_add_string_value(builder, cmsg->filter);
+
+    json_builder_set_member_name(builder, "callers");
+    json_builder_begin_array(builder);
+    for (tmp = cmsg->callers; tmp != NULL; tmp = g_list_next(tmp)) {
+        json_builder_begin_object(builder);
+        cinet_caller_info_build((CICallerInfo*)tmp->data, builder);
+        json_builder_end_object(builder);
+    }
+    json_builder_end_array(builder);
+
+    json_builder_end_object(builder);
+
+    root = json_builder_get_root(builder);
+    g_object_unref(builder);
+
+    return root;
+}
+
+CINetMsg *cinet_msg_db_get_caller_list_read(JsonNode *root)
+{
+    if (!JSON_NODE_HOLDS_OBJECT(root))
+        return NULL;
+
+    CINetMsgDbGetCallerList *msg = cinet_msg_alloc(CI_NET_MSG_DB_GET_CALLER_LIST);
+    
+    JsonObject *obj = json_node_get_object(root);
+
+    ((CINetMsg*)msg)->guid = (guint32)json_object_get_int_member(obj, "guid");
+
+    cinet_msg_db_get_caller_list_set_value((CINetMsg*)msg, "user", GINT_TO_POINTER(json_object_get_int_member(obj, "user")));
+
+    if (json_object_has_member(obj, "filter"))
+        cinet_msg_db_get_caller_list_set_value((CINetMsg*)msg, "format",
+                (gpointer)json_object_get_string_member(obj, "filter"));
+
+    JsonArray *arr = json_node_get_array(json_object_get_member(obj, "callers"));
+    GList *callers = json_array_get_elements(arr);
+    GList *tmp;
+    CICallerInfo *info;
+
+    for (tmp = callers; tmp != NULL; tmp = g_list_next(tmp)) {
+        info = cinet_caller_info_new();
+        cinet_caller_info_read(info, json_node_get_object((JsonNode*)tmp->data));
+        msg->callers = g_list_prepend(msg->callers, (gpointer)info);
+    }
+
+    msg->callers = g_list_reverse(msg->callers);
+
+    g_list_free(callers);
+
+    return (CINetMsg*)msg;
+}
+
+void cinet_msg_db_get_caller_list_set_value(CINetMsg *msg, const gchar *key, const gpointer value)
+{
+    if (!msg || !key || msg->msgtype != CI_NET_MSG_DB_GET_CALLER_LIST)
+        return;
+
+    if (!strcmp(key, "user")) {
+        ((CINetMsgDbGetCallerList*)msg)->user = GPOINTER_TO_INT(value);
+        return;
+    }
+
+    if (!strcmp(key, "caller")) {
+        ((CINetMsgDbGetCallerList*)msg)->callers = g_list_append(
+            ((CINetMsgDbGetCallerList*)msg)->callers, value);
+        return;
+    }
+    
+    if (!strcmp(key, "filter")) {
+        g_free(((CINetMsgDbGetCallerList*)msg)->filter);
+        ((CINetMsgDbGetCallerList*)msg)->filter = g_strdup((const gchar *)value);
+        return;
+    }
+}
+
+void cinet_msg_db_get_caller_list_free(CINetMsg *msg)
+{
+    g_list_free_full(((CINetMsgDbGetCallerList*)msg)->callers,
+            (GDestroyNotify)cinet_caller_info_free_full);
+    g_free(((CINetMsgDbGetCallerList*)msg)->filter);
 }
 
 JsonNode *cinet_msg_default_build(CINetMsg *msg)

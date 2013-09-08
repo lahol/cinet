@@ -22,7 +22,14 @@ void cinet_message_set_value(CINetMsg *msg, const gchar *key, const gpointer val
 
 CICallInfo *cinet_call_info_new(void);
 void cinet_call_info_free(CICallInfo *info);
+void cinet_call_info_free_full(CICallInfo *info);
 void cinet_call_info_copy(CICallInfo *dst, CICallInfo *src);
 void cinet_call_info_set_value(CICallInfo *info, const gchar *key, const gpointer value);
+
+CICallerInfo *cinet_caller_info_new(void);
+void cinet_caller_info_free(CICallerInfo *info);
+void cinet_caller_info_free_full(CICallerInfo *info);
+void cinet_caller_info_copy(CICallerInfo *dst, CICallerInfo *src);
+void cinet_caller_info_set_value(CICallerInfo *info, const gchar *key, const gpointer value);
 
 #endif
