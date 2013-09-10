@@ -668,6 +668,10 @@ CINetMsg *cinet_msg_event_ring_read(JsonNode *root)
     cinet_msg_event_ring_set_value((CINetMsg*)msg, "stage", GINT_TO_POINTER(json_object_get_int_member(obj, "stage")));
     cinet_msg_event_ring_set_value((CINetMsg*)msg, "part", GINT_TO_POINTER(json_object_get_int_member(obj, "part")));
 
+    if (json_object_has_member(obj, "msgid"))
+        cinet_msg_event_ring_set_value((CINetMsg*)msg, "msgid",
+                (gpointer)json_object_get_string_member(obj, "msgid"));
+
     cinet_call_info_read(&msg->callinfo, obj);
 
     return (CINetMsg*)msg;
