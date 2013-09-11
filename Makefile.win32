@@ -8,13 +8,13 @@ LIBS=`$(PKG_CONFIG) --libs glib-2.0 json-glib-1.0`
 all: libcinet.so.1.0 libcinet.a
 
 test: test.o
-	$(CC) -L. -o test test.o -lcinet $(LIBS)
+	$(LD) -L. -o test test.o -lcinet $(LIBS)
 
 libcinet.so.1.0: cinet.o
-	$(CC) -shared -Wl,-soname,libcinet.so -o libcinet.so.1.0 cinet.o $(LIBS)
+	$(LD) -shared -Wl,-soname,libcinet.so -o libcinet.so.1.0 cinet.o $(LIBS)
 
 libcinet.a: cinet.o
-	$(AR) -cvq -o libcinet.a cinet.o
+	$(AR) cvr -o libcinet.a cinet.o
 
 %.o: %.c $(wildcard *.h)
 	$(CC) -I. $(CFLAGS) -c -o $@ $<
@@ -27,4 +27,4 @@ install: libcinet.so.1.0 libcinet.a
 	cp cinet.h cinetmsgs.h $(CROSSENV)/usr/include
 
 clean:
-	rm -f cinet.dll test test.o cinet.o
+	$(RM) libcinet.a libcinet.so.1.0 test test.o cinet.o

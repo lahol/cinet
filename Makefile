@@ -5,7 +5,7 @@ LIBS=`pkg-config --libs glib-2.0 json-glib-1.0`
 all: libcinet.so.1.0
 
 test: test.o
-	$(CC) -L. -o test test.o -lcinet $(LIBS)
+	$(LD) -L. -o test test.o -lcinet $(LIBS)
 
 test.o: test.c
 	$(CC) -I. $(CFLAGS) -c -o test.o test.c
@@ -21,4 +21,4 @@ install: libcinet.so.1.0
 	cp cinet.h cinetmsgs.h /usr/include
 
 clean:
-	rm -f libcinet.so.1.0 test test.o cinet.o
+	$(RM) libcinet.so.1.0 test test.o cinet.o
