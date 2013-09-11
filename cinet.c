@@ -503,12 +503,12 @@ void cinet_call_info_set_value(CICallInfo *info, const gchar *key, const gpointe
     }
 #define MSG_STR_SET(arg, flag) do {\
     if (!strcmp(key, #arg)) {\
+        g_free(info->arg);\
         if (value) {\
             info->arg = g_strdup((const gchar*)value);\
             info->fields |= flag;\
         }\
         else {\
-            g_free(info->arg);\
             info->arg = NULL;\
             info->fields &= ~flag;\
         }\
@@ -609,10 +609,10 @@ void cinet_caller_info_set_value(CICallerInfo *info, const gchar *key, const gpo
         return;
 #define MSG_STR_SET(arg) do {\
     if (!strcmp(key, #arg)) {\
+        g_free(info->arg);\
         if (value)\
             info->arg = g_strdup((const gchar*)value);\
         else {\
-            g_free(info->arg);\
             info->arg = NULL;\
         }\
         return;\
@@ -1054,7 +1054,7 @@ JsonNode *cinet_msg_db_get_caller_list_build(CINetMsg *msg)
     json_builder_set_member_name(builder, "user");
     json_builder_add_int_value(builder, cmsg->user);
 
-    json_builder_set_member_name(builder, "format");
+    json_builder_set_member_name(builder, "filter");
     json_builder_add_string_value(builder, cmsg->filter);
 
     json_builder_set_member_name(builder, "callers");
@@ -1088,7 +1088,7 @@ CINetMsg *cinet_msg_db_get_caller_list_read(JsonNode *root)
     cinet_msg_db_get_caller_list_set_value((CINetMsg*)msg, "user", GINT_TO_POINTER(json_object_get_int_member(obj, "user")));
 
     if (json_object_has_member(obj, "filter"))
-        cinet_msg_db_get_caller_list_set_value((CINetMsg*)msg, "format",
+        cinet_msg_db_get_caller_list_set_value((CINetMsg*)msg, "filter",
                 (gpointer)json_object_get_string_member(obj, "filter"));
 
     JsonArray *arr = json_node_get_array(json_object_get_member(obj, "callers"));
