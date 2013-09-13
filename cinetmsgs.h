@@ -76,6 +76,11 @@ typedef struct {
     CICallInfo callinfo;
 } CINetMsgEventRing;
 
+typedef struct {
+    CINetMsg parent;
+    CICallInfo callinfo;
+} CINetMsgEventCall;
+
 typedef enum {
     CIF_COMPLETENUMBER = (1<<0),
     CIF_AREACODE = (1<<1),

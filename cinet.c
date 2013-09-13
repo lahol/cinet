@@ -33,6 +33,11 @@ CINetMsg *cinet_msg_event_ring_read(JsonNode *root);
 void cinet_msg_event_ring_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
 void cinet_msg_event_ring_free(CINetMsg *msg);
 
+JsonNode *cinet_msg_event_call_build(CINetMsg *msg);
+CINetMsg *cinet_msg_event_call_read(JsonNode *root);
+void cinet_msg_event_call_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
+void cinet_msg_event_call_free(CINetMsg *msg);
+
 JsonNode *cinet_msg_db_num_calls_build(CINetMsg *msg);
 CINetMsg *cinet_msg_db_num_calls_read(JsonNode *root);
 void cinet_msg_db_num_calls_set_value(CINetMsg *msg, const gchar *key, const gpointer value);
@@ -67,7 +72,8 @@ static struct CINetMsgClass msgclasses[] = {
         cinet_msg_version_read, cinet_msg_version_free, cinet_msg_version_set_value},
     { CI_NET_MSG_EVENT_RING, sizeof(CINetMsgEventRing), cinet_msg_event_ring_build,
         cinet_msg_event_ring_read, cinet_msg_event_ring_free, cinet_msg_event_ring_set_value },
-    { CI_NET_MSG_EVENT_CALL, sizeof(CINetMsg), NULL, NULL, NULL, NULL },
+    { CI_NET_MSG_EVENT_CALL, sizeof(CINetMsgEventCall), cinet_msg_event_call_build,
+        cinet_msg_event_call_read, cinet_msg_event_call_free, cinet_msg_event_call_set_value },
     { CI_NET_MSG_EVENT_CONNECT, sizeof(CINetMsg), NULL, NULL, NULL, NULL },
     { CI_NET_MSG_EVENT_DISCONNECT, sizeof(CINetMsg), NULL, NULL, NULL, NULL },
     { CI_NET_MSG_LEAVE, sizeof(CINetMsgLeave), NULL, NULL, NULL, NULL },
@@ -700,6 +706,56 @@ void cinet_msg_event_ring_set_value(CINetMsg *msg, const gchar *key, const gpoin
 void cinet_msg_event_ring_free(CINetMsg *msg)
 {
     cinet_call_info_free(&((CINetMsgEventRing*)msg)->callinfo);
+}
+
+JsonNode *cinet_msg_event_call_build(CINetMsg *msg)
+{
+    CINetMsgEventCall *cmsg = (CINetMsgEventCall*)msg;
+    JsonBuilder *builder = json_builder_new();
+    JsonNode *root;
+
+    json_builder_begin_object(builder);
+
+    json_builder_set_member_name(builder, "guid");
+    json_builder_add_int_value(builder, msg->guid);
+
+    cinet_call_info_build(&cmsg->callinfo, builder);
+
+    json_builder_end_object(builder);
+
+    root = json_builder_get_root(builder);
+
+    g_object_unref(builder);
+
+    return root;
+}
+
+CINetMsg *cinet_msg_event_call_read(JsonNode *root)
+{
+    if (!JSON_NODE_HOLDS_OBJECT(root))
+        return NULL;
+
+    CINetMsgEventCall *msg = cinet_msg_alloc(CI_NET_MSG_EVENT_CALL);
+
+    JsonObject *obj = json_node_get_object(root);
+    ((CINetMsg*)msg)->guid = (guint32)json_object_get_int_member(obj, "guid");
+
+    cinet_call_info_read(&msg->callinfo, obj);
+
+    return (CINetMsg*)msg;
+}
+
+void cinet_msg_event_call_set_value(CINetMsg *msg, const gchar *key, const gpointer value)
+{
+    if (!msg || !key || msg->msgtype != CI_NET_MSG_EVENT_CALL)
+        return;
+    
+    cinet_call_info_set_value(&((CINetMsgEventRing*)msg)->callinfo, key, value);
+}
+
+void cinet_msg_event_call_free(CINetMsg *msg)
+{
+    cinet_call_info_free(&((CINetMsgEventCall*)msg)->callinfo);
 }
 
 JsonNode *cinet_msg_db_num_calls_build(CINetMsg *msg)
