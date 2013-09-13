@@ -688,7 +688,7 @@ void cinet_msg_event_ring_set_value(CINetMsg *msg, const gchar *key, const gpoin
     if (!msg || !key || msg->msgtype != CI_NET_MSG_EVENT_RING)
         return;
     if (!strcmp(key, "msgid")) {
-        strncpy(((CINetMsgMultipart*)msg)->msgid, value, 16);
+        g_strlcpy(((CINetMsgMultipart*)msg)->msgid, value, 15);
         return;
     }
     if (!strcmp(key, "stage")) {
