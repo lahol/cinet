@@ -11,7 +11,7 @@ test: test.o
 	$(LD) -L. -o test test.o -lcinet $(LIBS)
 
 libcinet.so.1.0: cinet.o
-	$(LD) -shared -Wl,-soname,libcinet.so -o libcinet.so.1.0 cinet.o $(LIBS)
+	$(CC) -shared -Wl,-soname,libcinet.so -o libcinet.so.1.0 cinet.o $(LIBS)
 
 libcinet.a: cinet.o
 	$(AR) cvr -o libcinet.a cinet.o
