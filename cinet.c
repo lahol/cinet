@@ -539,6 +539,12 @@ CICallInfo *cinet_call_info_new(void)
     return (CICallInfo*)g_malloc0(sizeof(CICallInfo));
 }
 
+void cinet_call_info_init(CICallInfo *info)
+{
+    if (info != NULL)
+        memset(info, 0, sizeof(CICallInfo));
+}
+
 void cinet_call_info_copy(CICallInfo *dst, CICallInfo *src)
 {
     if (dst == NULL || src == NULL || dst == src)
@@ -582,6 +588,12 @@ void cinet_call_info_free_full(CICallInfo *info)
 CICallerInfo *cinet_caller_info_new(void)
 {
     return (CICallerInfo*)g_malloc0(sizeof(CICallerInfo));
+}
+
+void cinet_caller_info_init(CICallerInfo *info)
+{
+    if (info != NULL)
+        memset(info, 0, sizeof(CICallerInfo));
 }
 
 void cinet_caller_info_free(CICallerInfo *info)
