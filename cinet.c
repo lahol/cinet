@@ -762,7 +762,7 @@ void cinet_msg_event_call_set_value(CINetMsg *msg, const gchar *key, const gpoin
     if (!msg || !key || msg->msgtype != CI_NET_MSG_EVENT_CALL)
         return;
     
-    cinet_call_info_set_value(&((CINetMsgEventRing*)msg)->callinfo, key, value);
+    cinet_call_info_set_value(&((CINetMsgEventCall*)msg)->callinfo, key, value);
 }
 
 void cinet_msg_event_call_free(CINetMsg *msg)
