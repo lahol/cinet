@@ -126,7 +126,7 @@ CINetMsg *cinet_msg_read(CINetMsgType msgtype, JsonNode *root)
     return cls->msg_read(root);
 }
 
-gpointer cinet_msg_alloc(CINetMsgType msgtype)
+CINetMsg *cinet_msg_alloc(CINetMsgType msgtype)
 {
     struct CINetMsgClass *cls = cinet_msg_type_get_class(msgtype);
     if (!cls || cls->size == 0)
@@ -142,8 +142,7 @@ void cinet_msg_free(CINetMsg *msg)
     struct CINetMsgClass *cls = cinet_msg_get_class(msg);
     if (cls && cls->msg_free)
         cls->msg_free(msg);
-    if (msg)
-        g_free(msg);
+    g_free(msg);
 }
 
 static inline void cinet_set_ulong(gpointer dst, gint off, guint32 val)
@@ -284,14 +283,14 @@ CINetMsg *cinet_message_new_va(CINetMsgType msgtype, va_list args)
     if (!msg)
         return NULL;
 
-    if (cls && cls->msg_set_value) {
+    if (cls) {
         do {
             key = va_arg(args, gchar*);
             val = va_arg(args, gpointer);
             if (key) {
                 if (!g_strcmp0(key, "guid"))
                     cinet_message_set_value(msg, key, val);
-                else
+                else if (cls->msg_set_value)
                     cls->msg_set_value(msg, key, val);
             }
         } while (key);
@@ -329,11 +328,11 @@ gint cinet_message_new_for_data(gchar **buffer, gsize *len, guint msgtype, ...)
 void cinet_message_set_value(CINetMsg *msg, const gchar *key, const gpointer value)
 {
     struct CINetMsgClass *cls = cinet_msg_get_class(msg);
-    if (!cls || !cls->msg_set_value || !key)
+    if (!cls || !key)
         return;
     if (g_strcmp0(key, "guid") == 0)
         msg->guid = GPOINTER_TO_UINT(value);
-    else
+    else if (cls->msg_set_value)
         cls->msg_set_value(msg, key, value);
 }
 
